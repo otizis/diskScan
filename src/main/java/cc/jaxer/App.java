@@ -17,33 +17,35 @@ public class App
 {
     private static Logger logger = LogManager.getLogger(App.class);
 
-    public static ExecutorService service = Executors.newFixedThreadPool(500);
+    public static ExecutorService service = Executors.newFixedThreadPool(4);
 
     public final static AtomicLong pendingFileVisits = new AtomicLong();
 
     public static void main(String[] args)
     {
+        long start = System.currentTimeMillis();
         File dir = new File("D:\\Resource\\YZ_Com");
         logger.info(dir.getAbsolutePath());
+        Node rootNode = new Node();
+        pendingFileVisits.incrementAndGet();
+        service.execute(new NodeSearchDownTask(dir, rootNode));
         try
         {
-            Node rootNode = new Node();
-            pendingFileVisits.incrementAndGet();
-            service.execute(new NodeSearchDownTask(dir, rootNode));
             while (pendingFileVisits.get() != 0)
             {
                 Thread.sleep(1000);
+                System.out.print(pendingFileVisits.get()+"-->");
             }
-            service.shutdown();
-            countTotalNode(rootNode);
-            System.out.println(rootNode.size);
-            System.out.println("size: "+ Util.helpSize(rootNode.size));
         }
         catch (Exception e)
         {
             logger.error("error ", e);
         }
-
+        service.shutdown();
+        countTotalNode(rootNode);
+        System.out.println("end");
+        System.out.println("size: " + Util.helpSize(rootNode.size));
+        System.out.println("spend: " + (System.currentTimeMillis() - start)/1000d);
 
     }
 
