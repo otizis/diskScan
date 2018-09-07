@@ -28,8 +28,6 @@ public class NodeSearchDownTask implements Runnable
     {
         Node me = new Node();
         me.name = dirFile.getName();
-        me.path = dirFile.getAbsolutePath();
-        logger.debug(me.path);
         me.isDir = dirFile.isDirectory();
         me.size = dirFile.length();
 
