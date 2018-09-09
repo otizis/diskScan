@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.util.ArrayList;
 
 /**
  * @author jaxer
@@ -27,17 +28,21 @@ public class NodeSearchDownTask implements Runnable
     public void run()
     {
         Node me = new Node();
-        me.name = dirFile.getName();
-        me.isDir = dirFile.isDirectory();
-        me.size = dirFile.length();
+        me.setName(dirFile.getName());
+        me.setDir(dirFile.isDirectory());
+        me.setSize(dirFile.length());
 
-        synchronized (this.parentNode.subNode){
-            this.parentNode.subNode.add(me);
+
+        synchronized (parentNode){
+            if(this.parentNode.getChildren() == null){
+                this.parentNode.setChildren(new ArrayList<Node>());
+            }
+            this.parentNode.getChildren().add(me);
         }
 
-        me.parentNode = this.parentNode;
+        me.setParentNode(this.parentNode);
 
-        if (me.isDir)
+        if (me.isDir())
         {
             File[] files = dirFile.listFiles();
             if (files == null)
