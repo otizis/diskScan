@@ -1,93 +1,43 @@
 package cc.jaxer;
 
 
-import com.alibaba.fastjson.JSON;
-import org.apache.commons.io.FileUtils;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.support.config.FastJsonConfig;
+import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.converter.HttpMessageConverter;
 
 /**
  * 计算某个目录下的文件，统计该文件夹的大小
  */
+@SpringBootApplication
 public class App
 {
-    private static Logger logger = LogManager.getLogger(App.class);
-
-    public static ExecutorService service = Executors.newFixedThreadPool(8);
-
-    public final static AtomicLong pendingFileVisits = new AtomicLong();
-
-    public final static AtomicLong nodeId = new AtomicLong(1);
-
-    public final static ConcurrentHashMap<Long, Node> map = new ConcurrentHashMap<>();
-
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args)
     {
-        long start = System.currentTimeMillis();
-        File dir = new File("D:\\Resource\\MyProject");
-        logger.info(dir.getAbsolutePath());
-        Node rootNode = new Node();
-        pendingFileVisits.incrementAndGet();
-        service.execute(new NodeSearchDownTask(dir, rootNode));
-        try
-        {
-            while (pendingFileVisits.get() != 0)
-            {
-                Thread.sleep(1000);
-                System.out.print(pendingFileVisits.get()+"-->");
-            }
-        }
-        catch (Exception e)
-        {
-            logger.error("error ", e);
-        }
-        service.shutdown();
-        countTotalNode(rootNode);
-        System.out.println("end");
-        System.out.println("find file size:" + map.size());
-        System.out.println("space: " + Util.helpSize(rootNode.getSize()));
-        System.out.println("spend: " + (System.currentTimeMillis() - start)/1000d);
-
-        List<Node> subNode = rootNode.getChildren().get(0).getChildren();
-        for (Node node : subNode)
-        {
-            System.out.println(node.toString());
-        }
-        String s = JSON.toJSONString(rootNode);
-        FileUtils.writeStringToFile(new File("diskScan.json"),s,"utf8");
+        SpringApplication.run(App.class, args);
     }
 
-
-    private static void countTotalNode(Node node)
+    @Bean//使用@Bean注入fastJsonHttpMessageConvert
+    public HttpMessageConverters fastJsonHttpMessageConverters()
     {
-        List<Node> subNodeList = node.getChildren();
-        if(subNodeList==null){
-            return;
-        }
-        try
-        {
-            for (Node subNode : subNodeList)
-            {
-                if (subNode.isDir())
-                {
-                    countTotalNode(subNode);
-                }
-                node.setSize(node.getSize() + subNode.getSize());
-            }
-        }
-        catch (Exception e)
-        {
-            logger.error("error", e);
-        }
+        //1.需要定义一个Convert转换消息的对象
+        FastJsonHttpMessageConverter fastConverter = new FastJsonHttpMessageConverter();
+        //2.添加fastjson的配置信息，比如是否要格式化返回的json数据
+        //
+        FastJsonConfig fastJsonConfig = new FastJsonConfig();
+        fastJsonConfig.setSerializerFeatures(SerializerFeature.PrettyFormat);
+        //3.在convert中添加配置信息
+        fastConverter.setFastJsonConfig(fastJsonConfig);
 
+        HttpMessageConverter<?> converter = fastConverter;
+        return new HttpMessageConverters(converter);
     }
+
 
 }

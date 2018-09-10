@@ -55,13 +55,13 @@ public class NodeSearchDownTask implements Runnable
                 if (!Util.isJunctionOrSymlink(file))
                 {
                     NodeSearchDownTask nodeSearchDownTask = new NodeSearchDownTask(file, me);
-                    App.pendingFileVisits.incrementAndGet();
-                    App.service.execute(nodeSearchDownTask);
+                    Util.pendingFileVisits.incrementAndGet();
+                    Util.service.execute(nodeSearchDownTask);
                 }
             }
         }
 
-        long l = App.pendingFileVisits.decrementAndGet();
+        long l = Util.pendingFileVisits.decrementAndGet();
         logger.debug(l);
     }
 }

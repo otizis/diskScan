@@ -21,12 +21,13 @@ public class Node
 
     private String name;
 
+    @JSONField(serialize = false)
     private List<Node> children = null;
 
     public Node()
     {
-        this.id = App.nodeId.incrementAndGet();
-        App.map.put(this.id, this);
+        this.id = Util.nodeId.incrementAndGet();
+        Util.map.put(this.id, this);
     }
 
     @Override
