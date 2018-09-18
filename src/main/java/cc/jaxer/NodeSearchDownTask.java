@@ -32,9 +32,10 @@ public class NodeSearchDownTask implements Runnable
         me.setDir(dirFile.isDirectory());
         me.setSize(dirFile.length());
 
-
-        synchronized (parentNode){
-            if(this.parentNode.getChildren() == null){
+        synchronized (parentNode)
+        {
+            if (this.parentNode.getChildren() == null)
+            {
                 this.parentNode.setChildren(new ArrayList<Node>());
             }
             this.parentNode.getChildren().add(me);
@@ -42,26 +43,34 @@ public class NodeSearchDownTask implements Runnable
 
         me.setParentNode(this.parentNode);
 
-        if (me.isDir())
+        if (!me.isDir())
         {
-            File[] files = dirFile.listFiles();
-            if (files == null)
-            {
-                return;
-            }
-
-            for (File file : files)
-            {
-                if (!Util.isJunctionOrSymlink(file))
-                {
-                    NodeSearchDownTask nodeSearchDownTask = new NodeSearchDownTask(file, me);
-                    Util.pendingFileVisits.incrementAndGet();
-                    Util.service.execute(nodeSearchDownTask);
-                }
-            }
+            end(me);
+            return;
         }
 
+        File[] files = dirFile.listFiles();
+        if (files == null)
+        {
+            end(me);
+            return;
+        }
+        for (File file : files)
+        {
+            if (!Util.isJunctionOrSymlink(file))
+            {
+                NodeSearchDownTask nodeSearchDownTask = new NodeSearchDownTask(file, me);
+                Util.pendingFileVisits.incrementAndGet();
+                Util.service.execute(nodeSearchDownTask);
+            }
+        }
+        end(me);
+    }
+
+    public void end(Node me)
+    {
         long l = Util.pendingFileVisits.decrementAndGet();
+        Util.map.remove(me.getId());
         logger.debug(l);
     }
 }

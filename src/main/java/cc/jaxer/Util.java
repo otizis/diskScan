@@ -1,12 +1,17 @@
 package cc.jaxer;
 
+import com.alibaba.fastjson.JSON;
 import com.sun.jna.Native;
 import com.sun.jna.WString;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -21,13 +26,64 @@ public class Util
 
     public final static AtomicLong pendingFileVisits = new AtomicLong();
 
-    public final static AtomicLong nodeId = new AtomicLong(1);
+    public final static AtomicLong nodeId = new AtomicLong();
 
     public final static ConcurrentHashMap<Long, Node> map = new ConcurrentHashMap<>();
 
-    public static boolean loaded = false;
-
     static Kernel32 lib = null;
+
+    public static void scan(File dir)
+    {
+        long start = System.currentTimeMillis();
+
+        logger.info(dir.getAbsolutePath());
+
+        Node rootNode = new Node();
+        pendingFileVisits.incrementAndGet();
+        service.execute(new NodeSearchDownTask(dir, rootNode));
+
+        try
+        {
+            while (pendingFileVisits.get() != 0)
+            {
+                Thread.sleep(2000);
+                logger.info(pendingFileVisits.get());
+            }
+        }
+        catch (Exception e)
+        {
+            logger.error("error ", e);
+        }
+
+        service.shutdown();
+
+        countTotalNode(rootNode);
+
+        System.out.println("end");
+        System.out.println("find file size:" + map.size());
+        System.out.println("space: " + Util.helpSize(rootNode.getSize()));
+        System.out.println("spend: " + (System.currentTimeMillis() - start) / 1000d);
+
+        List<Node> subNode = rootNode.getChildren().get(0).getChildren();
+        for (Node node : subNode)
+        {
+            System.out.println(node.toString());
+        }
+        String dataJson = JSON.toJSONString(subNode);
+        try
+        {
+            FileUtils.writeStringToFile(new File("data.json"), dataJson, "utf8");
+            ClassLoader classLoader = Util.class.getClassLoader();
+            InputStream resourceAsStream = classLoader.getResourceAsStream("result.html");
+            String htmlTemplate = IOUtils.toString(resourceAsStream);
+            String resultHtml = htmlTemplate.replace("diskData", dataJson);
+            FileUtils.writeStringToFile(new File("result.html"), resultHtml, "utf8");
+        }
+        catch (IOException e)
+        {
+            logger.error("error", e);
+        }
+    }
 
     public static int getWin32FileAttributes(File f) throws IOException
     {
@@ -81,52 +137,6 @@ public class Util
             idx++;
         }
         return t + unit[idx];
-    }
-
-    public static void scan(File dir)
-    {
-        if(loaded){
-            return;
-        }
-        loaded = true;
-
-        long start = System.currentTimeMillis();
-
-        logger.info(dir.getAbsolutePath());
-
-        Node rootNode = new Node();
-        pendingFileVisits.incrementAndGet();
-        service.execute(new NodeSearchDownTask(dir, rootNode));
-
-        try
-        {
-            while (pendingFileVisits.get() != 0)
-            {
-                Thread.sleep(1000);
-                System.out.print(pendingFileVisits.get() + "-->");
-            }
-        }
-        catch (Exception e)
-        {
-            logger.error("error ", e);
-        }
-
-        service.shutdown();
-
-        countTotalNode(rootNode);
-
-        System.out.println("end");
-        System.out.println("find file size:" + map.size());
-        System.out.println("space: " + Util.helpSize(rootNode.getSize()));
-        System.out.println("spend: " + (System.currentTimeMillis() - start) / 1000d);
-
-        List<Node> subNode = rootNode.getChildren().get(0).getChildren();
-        for (Node node : subNode)
-        {
-            System.out.println(node.toString());
-        }
-        //        String s = JSON.toJSONString(subNode);
-        //        FileUtils.writeStringToFile(new File("diskScan.json"),s,"utf8");
     }
 
     private static void countTotalNode(Node node)

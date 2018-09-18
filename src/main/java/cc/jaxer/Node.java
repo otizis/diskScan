@@ -21,7 +21,6 @@ public class Node
 
     private String name;
 
-    @JSONField(serialize = false)
     private List<Node> children = null;
 
     public Node()
