@@ -62,7 +62,7 @@
 
                     return [
                         '<div class="tooltip-title">' + formatUtil.encodeHTML(treePath.join('/')) + '</div>',
-                        'Disk Usage: ' + formatUtil.addCommas(value) + ' KB',
+                        'Disk Usage: ' + formatUtil.addCommas(value) + ' B',
                     ].join('');
                 }
             },
@@ -72,6 +72,7 @@
                     name:'Disk Usage',
                     type:'treemap',
                     visibleMin: 300,
+                    leafDepth:1,
                     label: {
                         show: true,
                         formatter: '{b}'
